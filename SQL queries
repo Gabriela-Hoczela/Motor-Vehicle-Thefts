@@ -1,0 +1,128 @@
+--What types of vehicles are most often and least often stolen? 
+
+SELECT vehicle_type
+       ,COUNT(*) AS number_cars
+FROM stolen_vehicles
+WHERE vehicle_type IS NOT NULL
+GROUP BY vehicle_type
+ORDER BY number_cars DESC
+
+--What types of vehicles are most often and least often stolen? Does this vary by region?
+
+SELECT region
+	  ,COUNT(*) AS number_cars
+FROM stolen_vehicles st
+LEFT JOIN locations loc ON st.location_id = loc.location_id
+WHERE vehicle_type IS NOT NULL
+GROUP BY region
+ORDER BY number_cars DESC
+
+SELECT region
+      ,vehicle_type
+	  ,COUNT(*) AS number_cars
+FROM stolen_vehicles st
+LEFT JOIN locations loc ON st.location_id = loc.location_id
+WHERE vehicle_type IS NOT NULL
+GROUP BY region, vehicle_type
+ORDER BY number_cars DESC
+
+--What is the average age of the vehicles that are stolen? 
+
+SELECT AVG( YEAR(date_stolen) - model_year ) AS avg_age
+FROM stolen_vehicles
+WHERE model_year IS NOT NULL
+  AND vehicle_type IS NOT NULL
+
+SELECT vehicle_id
+     , vehicle_type
+     , YEAR(date_stolen)              AS date_stolen
+	 , model_year
+	 , YEAR(date_stolen) - model_year AS age
+FROM stolen_vehicles
+WHERE model_year IS NOT NULL
+  AND vehicle_type IS NOT NULL
+
+--Does this vary based on the vehicle type?
+
+SELECT vehicle_type
+     , ROUND( AVG( YEAR(date_stolen) - model_year ), 0) AS avg_age
+FROM stolen_vehicles
+WHERE model_year IS NOT NULL
+  AND vehicle_type IS NOT NULL
+GROUP BY vehicle_type
+
+--Which regions have the most and least number of stolen vehicles?
+
+SELECT region
+	  ,COUNT(*) AS number_cars
+FROM stolen_vehicles st
+JOIN locations loc ON st.location_id = loc.location_id
+WHERE vehicle_type IS NOT NULL
+GROUP BY region
+ORDER BY number_cars DESC
+
+--What are the characteristics of the regions?
+
+SELECT region
+      ,country
+      ,population
+      ,density
+	  ,COUNT(*) AS number_cars
+FROM locations loc
+JOIN stolen_vehicles st ON loc.location_id = st.location_id
+WHERE st.vehicle_type IS NOT NULL
+GROUP BY region
+        ,country
+        ,population
+        ,density
+ORDER BY number_cars DESC
+
+--What day of the week are vehicles most often and least often stolen?
+
+SELECT vehicle_id
+      ,vehicle_type
+      ,DATENAME( WEEKDAY, date_stolen) AS [weekday]
+FROM stolen_vehicles
+WHERE vehicle_type IS NOT NULL
+
+--What types and color of vehicles are most often stolen? 
+
+SELECT vehicle_type
+      ,color
+      ,COUNT(*) AS number_cars
+FROM stolen_vehicles
+WHERE vehicle_type IS NOT NULL
+GROUP BY vehicle_type, color
+ORDER BY number_cars DESC
+
+SELECT vehicle_type, 
+       ISNULL([silver], 0) AS silver, 
+       ISNULL([white], 0) AS white, 
+       ISNULL([black], 0) AS black, 
+       ISNULL([blue], 0) AS blue, 
+       ISNULL([red], 0) AS red, 
+       ISNULL([grey], 0) AS grey, 
+       ISNULL([green], 0) AS green, 
+       ISNULL([other], 0) AS other
+FROM (
+    SELECT vehicle_type, 
+           CASE 
+               WHEN color NOT IN ('silver', 'white', 'black', 'blue', 'red', 'grey', 'green') THEN 'other' 
+               ELSE color 
+           END AS color,
+           COUNT(*) AS number_cars
+    FROM stolen_vehicles
+    WHERE vehicle_type IS NOT NULL
+    GROUP BY vehicle_type, 
+             CASE 
+                 WHEN color NOT IN ('silver', 'white', 'black', 'blue', 'red', 'grey', 'green') THEN 'other' 
+                 ELSE color 
+             END
+) color_cars
+PIVOT (
+    SUM(number_cars)
+    FOR color IN ([silver], [white], [black], [blue], [red], [grey], [green], [other])
+) AS pivot_table
+ORDER BY vehicle_type;
+
+
